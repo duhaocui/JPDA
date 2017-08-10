@@ -45,7 +45,7 @@ for i=1:No
         Pk=X'*(W.*X);
     elseif strcmp(SIM.use,'ekf')
         F=SIM.F(xf{k,i});
-        mk=F*xf{k,i};
+        mk=f{i}(xf{k,i});
         Pk=F*Pf{k,i}*F';
         
     end

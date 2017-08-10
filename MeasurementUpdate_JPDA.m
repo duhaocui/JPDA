@@ -95,7 +95,7 @@ for i=1:No
                             muprior=xf{k,target_ass};
                             Pprior=Pf{k,target_ass};
                             H=SIM.H(muprior);
-                            mz=H*muprior;
+                            mz=h(muprior);
                             Pz=H*Pprior*H'+R;
                         end
                         
@@ -151,7 +151,7 @@ for i=1:No
                         muprior=xf{k,target_ass};
                         Pprior=Pf{k,target_ass};
                         H=SIM.H(muprior);
-                        mz=H*muprior;
+                        mz=h(muprior);
                         Pz=H*Pprior*H'+R;
                     end
                     
@@ -188,24 +188,35 @@ JPDAprops.Betas{k}=cell(1,No);
 %%   Do measurement update
 for i=1:No
     
+    if strcmp(SIM.use,'quad')
+        muprior=xf{k,i};
+        Pprior=Pf{k,i};
+        [x,w]=qd_pts(muprior,Pprior);
+        z=zeros(length(w),hn);
+        for j=1:length(w)
+            z(j,:)=h(x(j,:)');
+        end
+
+        [mz,Pz]=MeanCov(z,w);
+        Pz=Pz+R;
+        Pcc=CrossCov(x,muprior,z,mz,w);
+        K=Pcc/Pz;
     
-    muprior=xf{k,i};
-    Pprior=Pf{k,i};
-    [x,w]=qd_pts(muprior,Pprior);
-    z=zeros(length(w),hn);
-    for j=1:length(w)
-        z(j,:)=h(x(j,:)');
+    elseif strcmp(SIM.use,'ekf')
+        muprior=xf{k,i};
+        Pprior=Pf{k,i};
+        H=SIM.H(muprior);
+        mz=h(muprior);
+        Pz=H*Pprior*H'+R;
+        K=Pprior*H'*inv(Pz);
     end
     
-    [mz,Pz]=MeanCov(z,w);
-    Pz=Pz+R;
+    
     JPDAprops.pdfZ{k}{i}={mz,Pz};
     
     
-    Pcc=CrossCov(x,muprior,z,mz,w);
     
-    %kalman gain
-    K=Pcc/Pz;
+    
     v=cell(1,Nm);
     for j=1:Nm
         v{j}=ymset{j}-mz;
@@ -218,9 +229,6 @@ for i=1:No
     
     Beta
     Beta_null
-    %     vs=sum(Beta(:,i)'.*v);
-    %     keyboard
-    %     K=K*0;
     
     inovcov=0;
     vs=0;
@@ -233,6 +241,11 @@ for i=1:No
     
     Pupdated=Pprior-K*Pz*K';
     %     keyboard
+    
+%     keyboard
+%     Ptilde=0;
+%     Beta_null(i)=0;
+%     vs=ymset{i}-mz;
     
     xf{k,i}=muprior+K*vs;
     Pf{k,i}=Beta_null(i)*Pprior+(1-Beta_null(i))*Pupdated+Ptilde;

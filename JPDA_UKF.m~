@@ -16,6 +16,9 @@ Ns=1;
 h=@(x)measurementmodel(x) ;
 senspos=[0,0];
 
+SIM.use='quad';
+SIM.F=@(x)processmodel_jac(dt,x);
+SIM.H=@(x)measurementmodel_jac(dt,x);
 
 %% Setting JPDA properties
 JPDAprops.PD=0.8;
@@ -65,7 +68,11 @@ Q={1*diag([0.001,0.001,0.00001,0.00001]),diag([0.001,0.001,0.00001,0.00001])};
 a=[5,-40];
 b=[20,10];
 Nc=10;
-clutter = repmat(a,Nc,1) + repmat((b-a),Nc,1).*rand(Nc,2);
+% clutter = repmat(a,Nc,1) + repmat((b-a),Nc,1).*rand(Nc,2);
+data=load('Data/sim1');
+Yhist=data.JPDAprops.Yhist;
+clutter=data.clutter;
+
 %% getting the truth
 for i=1:No
     for k=2:1:NT
@@ -79,14 +86,14 @@ JPDAprops.Yhist={};
 for k=2:NT
     
     
-    [xf,Pf]=propagate_JPDA(xf,Pf,k-1,k,Q,No,f,fn,'ut');
+    [xf,Pf]=propagate_JPDA(xf,Pf,SIM,k-1,k,Q,No,f,fn,'ut');
     
-    ymset={h(xtruth{k,2})+sqrtm(R)*randn(hn,1),h(xtruth{k,1})+sqrtm(R)*randn(hn,1) };
-    for pp=No+1:No+size(clutter,1)
-        ymset{pp}=h(clutter(pp-No,:)')+sqrtm(R)*randn(hn,1);
-    end
-    
-    [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,ymset,k,R,No,h,hn,JPDAprops,'ut');
+%     ymset={h(xtruth{k,1})+sqrtm(R)*randn(hn,1),h(xtruth{k,2})+sqrtm(R)*randn(hn,1) };
+%     for pp=No+1:No+size(clutter,1)
+%         ymset{pp}=h(clutter(pp-No,:)')+sqrtm(R)*randn(hn,1);
+%     end
+    ymset=Yhist{k};
+    [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,SIM,ymset,k,R,No,h,hn,JPDAprops,'ut');
     
     figure(1)
     plot_JPDA(xf,Pf,clutter,No,xtruth,senspos,1,k,{'r','b'},{'ro-','bo-'})
@@ -117,8 +124,8 @@ for i=1:No
     P=[];
     for k=2:1:NT
         B=[B;JPDAprops.Betas{k}{i}'];
-        X=[X,xf{k,i}'-xtruth{k,i}'];
-        P=[P,reshape(Pf{k,i},1,fn^2)];
+        X=[X;xf{k,i}'-xtruth{k,i}'];
+        P=[P;reshape(Pf{k,i},1,fn(i)^2)];
     end
     XF{i}=X;
     BB{i}=B;
@@ -130,19 +137,40 @@ figure
 plot(Tvec(2:end),BB{1},'--','linewidth',2)
 legend('M1^*','M2^*','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12','NoMeas')
 axis([Tvec(2),Tvec(end),-0.1,1.1])
+xlabel('time')
+ylabel('\beta(k)')
+title('Association probabilities for target 1')
 plot_prop_paper
 
 figure
 plot(Tvec(2:end),BB{2},'--','linewidth',2)
 legend('M1^*','M2^*','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12','NoMeas')
 axis([Tvec(2),Tvec(end),-0.1,1.1])
+xlabel('time')
+ylabel('\beta(k)')
+title('Association probabilities for target 2')
 plot_prop_paper
 
-sqrt(sum(XF{i}.^2,2)
-
-figure()
 
 
+figure
+plot(Tvec(2:end),sqrt(sum(XF{1}.^2,2)))
+xlabel('time')
+ylabel('Error in states')
+title('Estimation error target 1')
+plot_prop_paper
+
+figure
+plot(Tvec(2:end),sqrt(sum(XF{2}.^2,2)))
+plot_prop_paper
+
+figure
+plot(Tvec(2:end),sqrt(sum(PF{1}.^2,2)))
+plot_prop_paper
+
+figure
+plot(Tvec(2:end),sqrt(sum(PF{2}.^2,2)))
+plot_prop_paper
 
 
 
