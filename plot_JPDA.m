@@ -1,4 +1,4 @@
-function plot_JPDA(xf,Pf,No,xtruth,Yhist,senspos,k0,k1,C,CF)
+function plot_JPDA(xf,Pf,clutter,No,xtruth,senspos,k0,k1,C,CF)
 
 
 
@@ -23,7 +23,7 @@ for i=1:No
     end
     plot(XF(:,1),XF(:,2),CF{i},'linewidth',2)
     
-    plot_1sigellip(xf{k1,i}(1:2),Pf{k1,i}(1:2,1:2),C{i},1)
+    plot_nsigellip(xf{k1,i}(1:2),Pf{k1,i}(1:2,1:2),4,C{i},1)
     
     
     
@@ -31,11 +31,10 @@ for i=1:No
 end
 
 plot(senspos(1),senspos(2),'^','MarkerSize',15,'linewidth',2)
-% for k=max(2,k0):k1
-%    plot() 
-% end
+   plot(clutter(:,1),clutter(:,2),'k+','MarkerSize',15,'linewidth',2) 
 
-axis([0,20,-30,30])
+
+% axis([0,20,-30,30])
 hold off
 
 

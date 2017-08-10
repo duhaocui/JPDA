@@ -1,4 +1,4 @@
-function [xf,Pf]=MeasurementUpdate_JPDA(xf,Pf,ymset,k,R,No,h,hn,JPDAprops,method)
+function [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,SIM,ymset,k,R,No,h,hn,JPDAprops,method)
 
 
 
@@ -15,6 +15,8 @@ switch lower(method)
         qd_pts=@conjugate_dir_gausspts_till_8moment;
     case 'gh'
         qd_pts=@(m,P)GH_pts(m,P,para);
+    case 'ekf'
+        qd_pts=NaN;
     otherwise
         error('smthg is wrong: DONT ask me what')
 end
@@ -78,20 +80,29 @@ for i=1:No
                     if tauj==1 % if meas ej is actually used
                         target_ass=TargetIndList( A(e,ej,:)==1 );
                         
-                        muprior=xf{k,target_ass};
-                        Pprior=Pf{k,target_ass};
-                        [x,w]=qd_pts(muprior,Pprior);
-                        z=zeros(length(w),hn);
-                        for q=1:length(w)
-                            z(q,:)=h(x(q,:)');
+                        if strcmp(SIM.use,'quad')
+                            muprior=xf{k,target_ass};
+                            Pprior=Pf{k,target_ass};
+                            [x,w]=qd_pts(muprior,Pprior);
+                            z=zeros(length(w),hn);
+                            for q=1:length(w)
+                                z(q,:)=h(x(q,:)');
+                            end
+                            
+                            [mz,Pz]=MeanCov(z,w);
+                            Pz=Pz+R;
+                        elseif strcmp(SIM.use,'ekf')
+                            muprior=xf{k,target_ass};
+                            Pprior=Pf{k,target_ass};
+                            H=SIM.H(muprior);
+                            mz=H*muprior;
+                            Pz=H*Pprior*H'+R;
                         end
                         
-                        [mz,Pz]=MeanCov(z,w);
-                        Pz=Pz+R;
                         if (ymset{ej}-mz)'*inv(Pz)*(ymset{ej}-mz)>=Gamma
                             Mprod(ej)=0; % outside the sigma ellipsoid, so its probability is 0, hence tis event has 0 prob
                         else
-%                             keyboard
+                            %                             keyboard
                             likelihood=mvnpdf(ymset{ej},mz,Pz);
                             Mprod(ej)=likelihood^tauj;
                         end
@@ -125,16 +136,25 @@ for i=1:No
                 if tauj==1 % if meas ej is actually used
                     target_ass=TargetIndList( A(e,ej,:)==1 );
                     
-                    muprior=xf{k,target_ass};
-                    Pprior=Pf{k,target_ass};
-                    [x,w]=qd_pts(muprior,Pprior);
-                    z=zeros(length(w),hn);
-                    for q=1:length(w)
-                        z(q,:)=h(x(q,:)');
+                    if strcmp(SIM.use,'quad')
+                        muprior=xf{k,target_ass};
+                        Pprior=Pf{k,target_ass};
+                        [x,w]=qd_pts(muprior,Pprior);
+                        z=zeros(length(w),hn);
+                        for q=1:length(w)
+                            z(q,:)=h(x(q,:)');
+                        end
+                        
+                        [mz,Pz]=MeanCov(z,w);
+                        Pz=Pz+R;
+                    elseif strcmp(SIM.use,'ekf')
+                        muprior=xf{k,target_ass};
+                        Pprior=Pf{k,target_ass};
+                        H=SIM.H(muprior);
+                        mz=H*muprior;
+                        Pz=H*Pprior*H'+R;
                     end
                     
-                    [mz,Pz]=MeanCov(z,w);
-                    Pz=Pz+R;
                     if (ymset{ej}-mz)'*inv(Pz)*(ymset{ej}-mz)>=Gamma
                         Mprod(ej)=0; % outside the sigma ellipsoid, so its probability is 0, hence tis event has 0 prob
                     else
@@ -159,14 +179,15 @@ for i=1:No
     
 end
 
-Beta
-Beta_null
+JPDAprops.Yhist{k}=ymset;
+JPDAprops.pdfZ{k}=cell(1,No);
+JPDAprops.Betas{k}=cell(1,No);
 
 % keyboard
 
 %%   Do measurement update
 for i=1:No
-
+    
     
     muprior=xf{k,i};
     Pprior=Pf{k,i};
@@ -178,6 +199,9 @@ for i=1:No
     
     [mz,Pz]=MeanCov(z,w);
     Pz=Pz+R;
+    JPDAprops.pdfZ{k}{i}={mz,Pz};
+    
+    
     Pcc=CrossCov(x,muprior,z,mz,w);
     
     %kalman gain
@@ -189,23 +213,29 @@ for i=1:No
     ss=sum(Beta(:,i))+Beta_null(i);
     Beta(:,i)=Beta(:,i)/ss;
     Beta_null(i)=Beta_null(i)/ss;
-%     vs=sum(Beta(:,i)'.*v);
+    
+    JPDAprops.Betas{k}{i}=[Beta(:,i);Beta_null(i)];
+    
+    Beta
+    Beta_null
+    %     vs=sum(Beta(:,i)'.*v);
     %     keyboard
     %     K=K*0;
     
     inovcov=0;
     vs=0;
     for j=1:Nm
-        vs=Beta(j,i)*v{j};
+        vs=vs+Beta(j,i)*v{j};
         inovcov=inovcov+Beta(j,i)*v{j}*v{j}';
     end
     inovcov=inovcov-vs*vs';
     Ptilde=K*(inovcov)*K';
     
     Pupdated=Pprior-K*Pz*K';
+    %     keyboard
     
     xf{k,i}=muprior+K*vs;
     Pf{k,i}=Beta_null(i)*Pprior+(1-Beta_null(i))*Pupdated+Ptilde;
-    
+    %     i
 end
 end

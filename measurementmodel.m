@@ -11,5 +11,7 @@ r=sqrt(x(1)^2+x(2)^2);
 % r=x(1);
 % th=x(2);
 
-output=[r,th]';
+% output=[r,th]';
+% output=[r]';
+output=[th]';
 end
