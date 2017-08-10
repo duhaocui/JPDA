@@ -242,10 +242,6 @@ for i=1:No
     Pupdated=Pprior-K*Pz*K';
     %     keyboard
     
-%     keyboard
-%     Ptilde=0;
-%     Beta_null(i)=0;
-%     vs=ymset{i}-mz;
     
     xf{k,i}=muprior+K*vs;
     Pf{k,i}=Beta_null(i)*Pprior+(1-Beta_null(i))*Pupdated+Ptilde;
