@@ -1,4 +1,4 @@
-function [xf,Pf]=propagate_JPDA(xf,Pf,SIM,k,k1,Q,No,f,fn,method)
+function [xf,Pf]=propagate_JPDA(xf,Pf,SIM,Tvec,k,k1,Q,No,f,fn,method)
 if k1-k~=1
     error('wrong k1 and k')
 end
@@ -32,7 +32,7 @@ for i=1:No
         
         Y=zeros(size(x));
         for j=1:1:length(w)
-            Y(j,:)=f{i}(x(j,:)');
+            Y(j,:)=f{i}(Tvec(k),x(j,:)');
         end
         
         [N,n]=size(Y);

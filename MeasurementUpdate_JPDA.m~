@@ -57,6 +57,27 @@ V=JPDAprops.V;
 PD=JPDAprops.PD;
 Gamma=JPDAprops.Gamma;
 
+% doing some pre computations
+if strcmp(SIM.use,'quad')
+    PZ=cell(1,No);
+    MZ=cell(1,No);
+    for i=1:No
+        muprior=xf{k,i};
+        Pprior=Pf{k,i};
+        [x,w]=qd_pts(muprior,Pprior);
+        z=zeros(length(w),hn);
+        for q=1:length(w)
+            z(q,:)=h(x(q,:)');
+        end
+
+        [mz,Pz]=MeanCov(z,w);
+        Pz=Pz+R;
+        MZ{i}=mz;
+        PZ
+    end
+end
+
+
 % getting validation region
 for i=1:No
     
@@ -95,7 +116,7 @@ for i=1:No
                             muprior=xf{k,target_ass};
                             Pprior=Pf{k,target_ass};
                             H=SIM.H(muprior);
-                            mz=H*muprior;
+                            mz=h(muprior);
                             Pz=H*Pprior*H'+R;
                         end
                         
@@ -151,7 +172,7 @@ for i=1:No
                         muprior=xf{k,target_ass};
                         Pprior=Pf{k,target_ass};
                         H=SIM.H(muprior);
-                        mz=H*muprior;
+                        mz=h(muprior);
                         Pz=H*Pprior*H'+R;
                     end
                     
@@ -206,7 +227,7 @@ for i=1:No
         muprior=xf{k,i};
         Pprior=Pf{k,i};
         H=SIM.H(muprior);
-        mz=H*muprior;
+        mz=h(muprior);
         Pz=H*Pprior*H'+R;
         K=Pprior*H'*inv(Pz);
     end
@@ -241,8 +262,6 @@ for i=1:No
     
     Pupdated=Pprior-K*Pz*K';
     %     keyboard
-    
-    Ptilde
     
     
     xf{k,i}=muprior+K*vs;

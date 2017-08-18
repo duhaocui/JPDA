@@ -23,7 +23,7 @@ for i=1:No
     end
     plot(XF(:,1),XF(:,2),CF{i},'linewidth',2)
     
-    plot_nsigellip(xf{k1,i}(1:2),Pf{k1,i}(1:2,1:2),4,C{i},1)
+    plot_nsigellip(xf{k1,i}(1:2),Pf{k1,i}(1:2,1:2),2,C{i},1)
     
     
     
