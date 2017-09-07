@@ -57,6 +57,27 @@ V=JPDAprops.V;
 PD=JPDAprops.PD;
 Gamma=JPDAprops.Gamma;
 
+% doing some pre computations
+if strcmp(SIM.use,'quad')
+    PZ=cell(1,No);
+    MZ=cell(1,No);
+    for i=1:No
+        muprior=xf{k,i};
+        Pprior=Pf{k,i};
+        [x,w]=qd_pts(muprior,Pprior);
+        z=zeros(length(w),hn);
+        for q=1:length(w)
+            z(q,:)=h(x(q,:)');
+        end
+        
+        [mz,Pz]=MeanCov(z,w);
+        Pz=Pz+R;
+        MZ{i}=mz;
+        PZ{i}=Pz;
+    end
+end
+
+USE=SIM.use;
 % getting validation region
 for i=1:No
     
@@ -80,18 +101,20 @@ for i=1:No
                     if tauj==1 % if meas ej is actually used
                         target_ass=TargetIndList( A(e,ej,:)==1 );
                         
-                        if strcmp(SIM.use,'quad')
-                            muprior=xf{k,target_ass};
-                            Pprior=Pf{k,target_ass};
-                            [x,w]=qd_pts(muprior,Pprior);
-                            z=zeros(length(w),hn);
-                            for q=1:length(w)
-                                z(q,:)=h(x(q,:)');
-                            end
-                            
-                            [mz,Pz]=MeanCov(z,w);
-                            Pz=Pz+R;
-                        elseif strcmp(SIM.use,'ekf')
+                        if strcmp(USE,'quad')
+                            %                             muprior=xf{k,target_ass};
+                            %                             Pprior=Pf{k,target_ass};
+                            %                             [x,w]=qd_pts(muprior,Pprior);
+                            %                             z=zeros(length(w),hn);
+                            %                             for q=1:length(w)
+                            %                                 z(q,:)=h(x(q,:)');
+                            %                             end
+                            %
+                            %                             [mz,Pz]=MeanCov(z,w);
+                            %                             Pz=Pz+R;
+                            mz=MZ{target_ass};
+                            Pz=PZ{target_ass};
+                        elseif strcmp(USE,'ekf')
                             muprior=xf{k,target_ass};
                             Pprior=Pf{k,target_ass};
                             H=SIM.H(muprior);
@@ -137,16 +160,18 @@ for i=1:No
                     target_ass=TargetIndList( A(e,ej,:)==1 );
                     
                     if strcmp(SIM.use,'quad')
-                        muprior=xf{k,target_ass};
-                        Pprior=Pf{k,target_ass};
-                        [x,w]=qd_pts(muprior,Pprior);
-                        z=zeros(length(w),hn);
-                        for q=1:length(w)
-                            z(q,:)=h(x(q,:)');
-                        end
-                        
-                        [mz,Pz]=MeanCov(z,w);
-                        Pz=Pz+R;
+                        %                         muprior=xf{k,target_ass};
+                        %                         Pprior=Pf{k,target_ass};
+                        %                         [x,w]=qd_pts(muprior,Pprior);
+                        %                         z=zeros(length(w),hn);
+                        %                         for q=1:length(w)
+                        %                             z(q,:)=h(x(q,:)');
+                        %                         end
+                        %
+                        %                         [mz,Pz]=MeanCov(z,w);
+                        %                         Pz=Pz+R;
+                        mz=MZ{target_ass};
+                        Pz=PZ{target_ass};
                     elseif strcmp(SIM.use,'ekf')
                         muprior=xf{k,target_ass};
                         Pprior=Pf{k,target_ass};
@@ -196,12 +221,13 @@ for i=1:No
         for j=1:length(w)
             z(j,:)=h(x(j,:)');
         end
-
+        
         [mz,Pz]=MeanCov(z,w);
         Pz=Pz+R;
+        
         Pcc=CrossCov(x,muprior,z,mz,w);
         K=Pcc/Pz;
-    
+        
     elseif strcmp(SIM.use,'ekf')
         muprior=xf{k,i};
         Pprior=Pf{k,i};

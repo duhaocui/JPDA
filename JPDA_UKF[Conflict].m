@@ -4,7 +4,7 @@ clear
 close all
 
 %% setting up the models
-dt=2*60;
+dt=5*60;
 Tvec=0:dt:24*60*60;
 NT=length(Tvec);
 
@@ -64,13 +64,12 @@ Pf{1,2}=P0;
 hn=3;
 % R=diag([(0.1)^2]);
 R=diag([(0.5*pi/180)^2,(0.5*pi/180)^2,(0.5)^2]);
-% R=diag([(0.5*pi/180)^2,(0.5*pi/180)^2]);
 % R=diag([4^2,(10*pi/180)^2]);
-Q={0*diag([0.01,0.01,0.01,1e-8,1e-8,1e-8]),0*diag([0.01,0.01,0.01,1e-8,1e-8,1e-8])};
+Q={0*diag([0.01,0.01,0.01,1e-8,1e-8,1e-8]),diag([0.01,0.01,0.01,1e-8,1e-8,1e-8])};
 
 a=[5,-40];
 b=[20,10];
-Nc=10;
+Nc=15;
 % clutter = repmat(a,Nc,1) + repmat((b-a),Nc,1).*rand(Nc,2);
 % data=load('Data/sim4');
 % Yhist=data.JPDAprops.Yhist;
@@ -79,12 +78,12 @@ Nc=10;
 clutter_r= [5397        3191          98];
 clutter=[];
 while(1)
-   p=mvnrnd(clutter_r,diag([1000,1000,1000])) ;
-   targdir=p/norm(p);
+    p=mvnrnd(clutter_r,diag([1000,1000,10])) ;
+    targdir=p/norm(p);
     if acos(sensdir*targdir(:))<=60*pi/180
-       clutter=[clutter;p];
+        clutter=[clutter;p];
     end
-    if size(clutter,1)==Nc+5
+    if size(clutter,1)==Nc
         break
     end
 end
@@ -93,18 +92,18 @@ end
 %% getting the truth
 C={'ro','bo'};
 % figure(5)
-    for k=2:1:NT
-        for i=1:No
-            xtruth{k,i}=f{i}(Tvec(k-1),xtruth{k-1,i});
-%             plot3(xtruth{k,i}(1),xtruth{k,i}(2),xtruth{k,i}(3),C{i},'MarkerSize',10,'linewidth',2)
-%             hold on
-        end
-%         axis([-7100,7100,-7100,7100,-7100,7100])
-%         pause(1)
-%         hold off
-        
+for k=2:1:NT
+    for i=1:No
+        xtruth{k,i}=f{i}(Tvec(k-1),xtruth{k-1,i});
+        %             plot3(xtruth{k,i}(1),xtruth{k,i}(2),xtruth{k,i}(3),C{i},'MarkerSize',10,'linewidth',2)
+        %             hold on
     end
+    %         axis([-7100,7100,-7100,7100,-7100,7100])
+    %         pause(1)
+    %         hold off
     
+end
+
 
 % keyboard
 
@@ -115,45 +114,38 @@ JPDAprops.Yhist={};
 for k=2:NT
     disp(strcat('iter k =',num2str(k)) );
     tic
-    [xf,Pf]=propagate_JPDA(xf,Pf,SIM,Tvec,k-1,k,Q,No,f,fn,'cut6');
+    [xf,Pf]=propagate_JPDA(xf,Pf,SIM,Tvec,k-1,k,Q,No,f,fn,'ut');
     toc
     
     ymset={};
-    for i=1:No 
+    for i=1:No
         targdir=xtruth{k,1}(1:3)/norm(xtruth{k,1}(1:3));
         if acos(sensdir*targdir(:))<=60*pi/180
-           ymset{i}=h(xtruth{k,i})+sqrtm(R)*randn(hn,1);
+            ymset{i}=h(xtruth{k,i})+sqrtm(R)*randn(hn,1);
         end
-        
     end
     L=length(ymset);
     if L>0
-        for pp=1:Nc+5
-            if L==2
-                m=randi(No,1);
-                ymset{L+pp}=h(xtruth{k,m})+3*sqrtm(R)*randn(hn,1);
+        
+        for pp=1:Nc
+            if pp<=5
+                ymset{L+pp}=h(xtruth{k,1})+3*sqrtm(R)*randn(hn,1);
             else
-                ymset{L+pp}=h(clutter(pp,:)')+sqrtm(R)*randn(hn,1);
+                ymset{L+pp}=h(xtruth{k,2})+3*sqrtm(R)*randn(hn,1);
             end
-
             if length(ymset)==12
-               break 
+                break
             end
         end
+        
+        %     ymset=Yhist{k};
         tic
-        [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,SIM,ymset,k,R,No,h,hn,JPDAprops,'cut6');
+        [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,SIM,ymset,k,R,No,h,hn,JPDAprops,'ut');
         toc
-    else
-        JPDAprops.Betas{k}=cell(1,No);
-        for ii=1:No
-           JPDAprops.Betas{k}{ii}=zeros(13,1); 
-        end
     end
-%     ymset=Yhist{k};
     
-    
-%     figure(1)
-%     plot_JPDA(xf,Pf,clutter,No,xtruth,senspos,1,k,{'r','b'},{'ro-','bo-'})
+    %     figure(1)
+    %     plot_JPDA(xf,Pf,clutter,No,xtruth,senspos,1,k,{'r','b'},{'ro-','bo-'})
     
     %    hold on
     %    ymset{1}
@@ -165,8 +157,8 @@ for k=2:NT
     
     %    keyboard
     
-%     pause(0.2)
-%     hold off
+    %     pause(0.2)
+    %     hold off
     
 end
 
@@ -263,7 +255,7 @@ plot_prop_paper
 %         mz=data.JPDAprops.pdfZ{k}{i}{1};
 %         Pz=data.JPDAprops.pdfZ{k}{i}{2};
 %         yrng=linspace(mz-3*sqrtm(Pz),mz+3*sqrtm(Pz),100);
-%         pth=normpdf(yrng,mz,Pz);      
+%         pth=normpdf(yrng,mz,Pz);
 %         plot(yrng,pth,C{i})
 %     end
 %     NM=length(data.JPDAprops.Yhist{k});
