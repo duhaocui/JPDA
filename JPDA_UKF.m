@@ -63,7 +63,7 @@ Pf{1,2}=P0;
 
 hn=3;
 % R=diag([(0.1)^2]);
-R=diag([(0.5*pi/180)^2,(0.5*pi/180)^2,(0.5)^2]);
+R=diag([(0.5*pi/180)^2,(0.5*pi/180)^2,(1)^2]);
 % R=diag([(0.5*pi/180)^2,(0.5*pi/180)^2]);
 % R=diag([4^2,(10*pi/180)^2]);
 Q={0*diag([0.01,0.01,0.01,1e-8,1e-8,1e-8]),0*diag([0.01,0.01,0.01,1e-8,1e-8,1e-8])};
@@ -115,7 +115,7 @@ JPDAprops.Yhist={};
 for k=2:NT
     disp(strcat('iter k =',num2str(k)) );
     tic
-    [xf,Pf]=propagate_JPDA(xf,Pf,SIM,Tvec,k-1,k,Q,No,f,fn,'cut6');
+    [xf,Pf]=propagate_JPDA(xf,Pf,SIM,Tvec,k-1,k,Q,No,f,fn,'cut8');
     toc
     
     ymset={};
@@ -141,7 +141,7 @@ for k=2:NT
             end
         end
         tic
-        [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,SIM,ymset,k,R,No,h,hn,JPDAprops,'cut6');
+        [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,SIM,ymset,k,R,No,h,hn,JPDAprops,'cut8');
         toc
     else
         JPDAprops.Betas{k}=cell(1,No);
