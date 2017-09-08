@@ -193,7 +193,7 @@ for i=1:No
 end
 
 %%
-
+load('sim2bodyUKF')
 figure
 plot(Tvec(2:end),BB{1},'--','linewidth',2)
 legend('M1^*','M2^*','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12','NoMeas')
