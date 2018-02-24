@@ -1,9 +1,9 @@
-function [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,SIM,ymset,k,R,No,h,hn,JPDAprops,method)
+function [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,model,Radmodel,ymset,k,method)
 
 
 
 switch lower(method)
-    case {'ckf'}
+    case 'ckf'
         qd_pts=@cubature_KF_points;
     case 'ut'
         qd_pts=@(m,P)UT_sigmapoints(m,P,2);
@@ -19,6 +19,7 @@ switch lower(method)
         qd_pts=NaN;
     otherwise
         error('smthg is wrong: DONT ask me what')
+%         qd_pts
 end
 
 %% JPDA Association probabilities

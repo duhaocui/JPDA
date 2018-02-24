@@ -1,4 +1,4 @@
-function [xf,Pf]=propagate_JPDA(xf,Pf,SIM,Tvec,k,k1,Q,No,f,fn,method)
+function [xf,Pf]=propagate_JPDA(xf,Pf,Tvec,k,k1,model,method)
 if k1-k~=1
     error('wrong k1 and k')
 end
@@ -26,15 +26,15 @@ switch lower(method)
 end
 %     mu_ut
 %     diag(P_ut)
-USE=SIM.use;
+USE=model.use_quad;
 S=cell(1,No);
 parfor i=1:No
-    if strcmp(USE,'quad')
+    if USE==true
         [x,w]=qd_pts(xf{k,i},Pf{k,i});
         
         Y=zeros(size(x));
         for j=1:1:length(w)
-            Y(j,:)=f{i}(Tvec(k),x(j,:)');
+            Y(j,:)=model.f{i}(Tvec(k),x(j,:)');
         end
         
         [N,n]=size(Y);
@@ -46,12 +46,12 @@ parfor i=1:No
         X=Y-MU;
         Pk=X'*(W.*X);
     elseif strcmp(USE,'ekf')
-        F=SIM.F(xf{k,i});
-        mk=f{i}(xf{k,i});
+        F=model.f_jac(Tvec(k),xf{k,i});
+        mk=model.f{i}(Tvec(k),xf{k,i});
         Pk=F*Pf{k,i}*F';
         
     end
-    S{i}={mk,Pk+Q{i}};
+    S{i}={mk,Pk+model.Q{i}};
 %     xf{k1,i}=mk;
 %     Pf{k1,i}=Pk+Q{i};
 end

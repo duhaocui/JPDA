@@ -1,0 +1,25 @@
+[v,Rot,p]=vec_radar_coordchange([0 0 0],Radars.PolarPositions{i},'local2ecef');
+
+function Y=generate_rnd_clutter(N,PolarPositions,SensGeom)
+[v,Rot,p]=vec_radar_coordchange([0 0 0],PolarPositions,'local2ecef');
+coneang = SensGeom(1);
+R = SensGeom(2);
+
+Y=zeros(N,3);
+for i=1:N
+r=1000+(R-1000)*rnd(1);
+theta=0+(2*pi-0)*rnd(1);
+phi=-conang+(2*conang)*rnd(1);
+X(i,1)=r.*cos(theta);
+X(i,1)=r.*sin(theta);
+X(i,1)=r./tan(phi);
+
+
+
+
+
+
+
+
+
+
