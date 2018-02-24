@@ -283,6 +283,9 @@ metrics_ukf.measurement_time=zeros(1,NT);
 metrics_cut4.measurement_time=zeros(1,NT);
 metrics_cut6.measurement_time=zeros(1,NT);
 
+metrics_ukf.jpda_time=zeros(1,NT);
+metrics_cut4.jpda_time=zeros(1,NT);
+metrics_cut6.jpda_time=zeros(1,NT);
 
 %% running the filters
 for k=2:NT
