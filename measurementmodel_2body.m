@@ -1,4 +1,4 @@
-function h=measurementmodel_2body(x,PolarPosition,SensGeom)
+function [h,G]=measurementmodel_2body(x,PolarPosition,SensGeom)
 
 x=x(1:3);
 x=x(:);
@@ -28,7 +28,7 @@ end
 %     h=r;
 % end
 
-h=G*[th;phi];
+h=[th;phi];
 
 % % [azimuth,elevation,r] = cart2sph(x(1),x(2),x(3));
 % [v,Rot,p]=vec_radar_coordchange(x,PolarPosition,'ecef2local');

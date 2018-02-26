@@ -1,4 +1,4 @@
-function [xf,Pf]=propagate_JPDA(xf,Pf,Tvec,k,k1,model,method)
+function [xf1,Pf1]=propagate_JPDA(xf,Pf,Tvec,k,k1,model,method)
 if k1-k~=1
     error('wrong k1 and k')
 end
@@ -26,11 +26,11 @@ switch lower(method)
 end
 %     mu_ut
 %     diag(P_ut)
-USE=model.use_quad;
-S=cell(1,No);
-parfor i=1:No
-    if USE==true
-        [x,w]=qd_pts(xf{k,i},Pf{k,i});
+
+S=cell(1,model.No);
+parfor i=1:model.No
+    if strcmp(method,'ekf')==0
+        [x,w]=qd_pts(xf{i},Pf{i});
         
         Y=zeros(size(x));
         for j=1:1:length(w)
@@ -45,10 +45,10 @@ parfor i=1:No
         MU=repmat(mk',N,1);
         X=Y-MU;
         Pk=X'*(W.*X);
-    elseif strcmp(USE,'ekf')
-        F=model.f_jac(Tvec(k),xf{k,i});
-        mk=model.f{i}(Tvec(k),xf{k,i});
-        Pk=F*Pf{k,i}*F';
+    elseif strcmp(method,'ekf')
+        F=model.f_jac(Tvec(k),xf{i});
+        mk=model.f{i}(Tvec(k),xf{i});
+        Pk=F*Pf{i}*F';
         
     end
     S{i}={mk,Pk+model.Q{i}};
@@ -56,7 +56,10 @@ parfor i=1:No
 %     Pf{k1,i}=Pk+Q{i};
 end
 
-for i=1:No
-xf{k1,i}=S{i}{1};
-Pf{k1,i}=S{i}{2};
+xf1=cell(size(xf));
+Pf1=cell(size(Pf));
+
+for i=1:model.No
+    xf1{i}=S{i}{1};
+    Pf1{i}=S{i}{2};
 end

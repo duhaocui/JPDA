@@ -1,4 +1,4 @@
-function [xf,Pf,JPDAprops]=MeasurementUpdate_JPDA(xf,Pf,model,Radmodel,ymset,k,method)
+function [xf,Pf,JPDAprops,metrics]=MeasurementUpdate_JPDA(xf,Pf,model,Radmodel,JPDAprops,metrics,ymset,k,method)
 
 
 
@@ -22,81 +22,102 @@ switch lower(method)
         %         qd_pts
 end
 
-%% JPDA Association probabilities
-% first get all events
-% Betas (i,j): i is target, j is measurement. if there are M measurements
-% then j=M+1 is the null probability
-Betas=get_JPDA_betas_fullmarginal(model,Radmodel);
-
-
-Nm=length(ymset);
-
-JPDAprops.Yhist{k}=ymset;
-JPDAprops.pdfZ{k}=cell(1,No);
-JPDAprops.Betas{k}=Betas;
-
-% keyboard
-
-%%   Do measurement update
-for i=1:model.No
+for radn = 1:Radmodel.Nrad
+    Nm=length(ymset{radn});
+    if Nm==0
+        continue
+    end
     
-    if strcmp(method,'quad')==0
-        muprior=xf{k,i};
-        Pprior=Pf{k,i};
-        [x,w]=qd_pts(muprior,Pprior);
-        z=zeros(length(w),hn);
-        for j=1:length(w)
-            z(j,:)=model.h(x(j,:)');
+    % doing some pre computations
+    PZ=cell(1,model.No);
+    MZ=cell(1,model.No);
+    KK=cell(1,model.No);
+    
+    
+    if strcmp(method,'ekf')==0
+        for i=1:model.No
+            muprior=xf{i};
+            Pprior=Pf{i}+model.artQ{i};
+            [x,w]=qd_pts(muprior,Pprior);
+            z=zeros(length(w),Radmodel.hn(radn));
+            flg=0;
+            for q=1:length(w)
+                [z(q,:),gg]=Radmodel.h{radn}(x(q,:)');
+                if any(isnan(gg))
+                    flg=1;
+                end
+            end
+            
+            [mz,Pz]=MeanCov(z,w);
+            Pz=Pz+Radmodel.R{radn};
+            MZ{i}=mz;
+            Pcc=CrossCov(x,muprior,z,mz,w);
+            if flg==1
+                PZ{i}=1e-14*eye(size(Pz));
+                KK{i}=zeros(model.fn(i),Radmodel.hn(radn));
+            else
+                PZ{i}=Pz;
+                KK{i}=Pcc/Pz;
+            end
         end
         
-        [mz,Pz]=MeanCov(z,w);
-        Pz=Pz+R;
+    else
+        for i=1:model.No
+            muprior=xf{i};
+            Pprior=Pf{i};
+            H=Radmodel.h_jac{radn}(muprior);
+            [mz,gg]=Radmodel.h{radn}(muprior);
+            Pz=H*Pprior*H'+Radmodel.R{radn};
+            MZ{i}=mz;
+            
+            if any(isnan(gg))
+                PZ{i}=1e-14*eye(size(Pz));
+                KK{i}=zeros(model.fn(i),Radmodel.hn(radn));
+            else
+                PZ{i}=Pz;
+                KK{i}=Pprior*H'*inv(Pz);
+            end
+        end
+    end
+    
+    %% JPDA Association probabilities
+    % first get all events
+    % Betas (i,j): i is target, j is measurement. if there are M measurements
+    % then j=M+1 is the null probability
+    pp = tic;
+    Betas=get_JPDA_betas_fullmarginal(MZ,PZ,model,JPDAprops,ymset{radn});
+    metrics.jpda_time(k) = toc(pp);
+    
+    Nm=length(ymset{radn});
+    JPDAprops.Betas{k}=Betas;
+    
+    %%   Do measurement update
+    for i=1:model.No
+        muprior=xf{i};
+        Pprior=Pf{i};
         
-        Pcc=CrossCov(x,muprior,z,mz,w);
-        K=Pcc/Pz;
+        v=cell(1,Nm);
+        for j=1:Nm
+            v{j}=ymset{radn}{j}-MZ{i};
+        end
         
-    elseif strcmp(method,'ekf')
-        muprior=xf{k,i};
-        Pprior=Pf{k,i};
-        H=model.h_jac(muprior);
-        mz=model.h(muprior);
-        Pz=H*Pprior*H'+R;
-        K=Pprior*H'*inv(Pz);
+        Betas(i,:)
+        
+        inovcov=0;
+        vs=0;
+        for j=1:Nm
+            vs=vs+Betas(i,j)*v{j};
+            inovcov=inovcov+Betas(i,j)*v{j}*v{j}';
+        end
+        inovcov=inovcov-vs*vs';
+        Ptilde=KK{i}*(inovcov)*KK{i}';
+        
+        Pupdated=Pprior-KK{i}*PZ{i}*KK{i}';
+        
+        
+        xf{i}=muprior+KK{i}*vs;
+        Pf{i}=Betas(i,end)*Pprior+(1-Betas(i,end))*Pupdated+Ptilde;
     end
     
-    
-    JPDAprops.pdfZ{k}{i}={mz,Pz};
-    
-    
-    
-    
-    v=cell(1,Nm);
-    for j=1:Nm
-        v{j}=ymset{j}-mz;
-    end
-%     ss=sum(Beta(:,i))+Beta_null(i);
-%     Beta(:,i)=Beta(:,i)/ss;
-%     Beta_null(i)=Beta_null(i)/ss;
-    
-%     JPDAprops.Betas{k}=Betas;
-    
-    Betas(i,:)
-    
-    inovcov=0;
-    vs=0;
-    for j=1:Nm
-        vs=vs+Betas(i,j)*v{j};
-        inovcov=inovcov+Betas(i,j)*v{j}*v{j}';
-    end
-    inovcov=inovcov-vs*vs';
-    Ptilde=K*(inovcov)*K';
-    
-    Pupdated=Pprior-K*Pz*K';
-    %     keyboard
-    
-    
-    xf{k,i}=muprior+K*vs;
-    Pf{k,i}=Betas(i,end)*Pprior+(1-Betas(i,end))*Pupdated+Ptilde;
-    %     i
 end
 end
