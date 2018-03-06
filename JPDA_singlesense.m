@@ -26,7 +26,7 @@ for i=1:model.No
     model.f{i}=@(tk,xk)processmodel_2body(dt,MU,tk,xk);
     model.fn(i)=6;
     model.Q{i}=1e-10*diag([1e-4,1e-4,1e-4,1e-8,1e-8,1e-8]);
-    model.artQ{i}=1e-2*diag([1e-6,1e-6,1e-6,1e-9,1e-9,1e-9]);
+    model.artQ{i}=1e-3*diag([1e-6,1e-6,1e-6,1e-9,1e-9,1e-9]);
 end
 
 
@@ -67,9 +67,9 @@ end
 
 
 %% radars (lat,long, altitude) in geod+edic
-Nrad=2;
+Nrad=1;
 
-hn=2;
+hn=3;
 
 close all
 th_rng=[-10*pi/180,10*pi/180];
@@ -81,32 +81,23 @@ phi_rng=[0,pi];
 [Ang,~]=uniform_sigma_pts([th_rng(1),phi_rng(1)],[th_rng(2),phi_rng(2)],4);
 
 
-PolarPositions=cell(1,Nrad);
+
 k=1;
-for i=1:1:size(Ang,1)
-    PolarPositions{i}=[Ang(i,1),Ang(i,2),Re];  % [th,phi,Re] Re means on the surface
-    
-    k=k+1;
-    if k>Nrad
-        break
-    end
-end
+PolarPositions={[0,-pi/6,Re]};
 
-SensGeom={[pi/4,10000],[pi/4,10000]};  %misc paras such as [cone_angle,max dist of meas]
+SensGeom={[pi/4,10000]};  %misc paras such as [cone_angle,max dist of meas]
 
-Radmodel.R={diag([(0.5*pi/180)^2,(0.5*pi/180)^2]),diag([(0.5*pi/180)^2,(0.5*pi/180)^2])};
+Radmodel.R={diag([(100*1e-3)^2,(5*pi/180)^2,(5*pi/180)^2])};
 
 Radmodel.SensGeom=SensGeom;
 Radmodel.PolarPositions=PolarPositions;
 Radmodel.Nrad=Nrad;
-Radmodel.hn=[hn,hn];
-Radmodel.h={ @(x)measurementmodel_2body(x,Radmodel.PolarPositions{1},Radmodel.SensGeom{1}),...
-    @(x)measurementmodel_2body(x,Radmodel.PolarPositions{2},Radmodel.SensGeom{2}) };
+Radmodel.hn=[hn];
+Radmodel.h={ @(x)measurementmodel_2body(x,Radmodel.PolarPositions{1},Radmodel.SensGeom{1}) };
 
-Radmodel.Nclutter=50;
+Radmodel.Nclutter=5;
 
 X1=generate_rnd_clutter(10,Radmodel.PolarPositions{1},Radmodel.SensGeom{1})
-X2=generate_rnd_clutter(10,Radmodel.PolarPositions{2},Radmodel.SensGeom{2})
 
 
 figure
@@ -116,8 +107,6 @@ for i=1:model.No
     plot3(xtruth{i}(:,1),xtruth{i}(:,2),xtruth{i}(:,3),'k--')
 end
 plot3(X1(:,1),X1(:,2),X1(:,3),'k+','linewidth',2,'MarkerSize',6)
-plot3(X2(:,1),X2(:,2),X2(:,3),'k+','linewidth',2,'MarkerSize',6)
-
 
 
 % keyboard
@@ -206,7 +195,7 @@ for i=1:length(Satobserve)
        goodtargs=[goodtargs,i];
    end
 end
-remtargs=[remtargs,goodtargs(2:end)];
+remtargs=[remtargs,goodtargs(4:end)];
 
 model.f(remtargs)=[];
 model.fn(remtargs)=[];
@@ -215,7 +204,9 @@ model.artQ(remtargs)=[];
 model.No=length(model.f);
 
 xtruth(remtargs)=[];
-
+Satobserve(remtargs)=[];
+    
+% keyboard
 
 %% Setting JPDA properties
 JPDAprops.PD=0.8;
@@ -347,7 +338,7 @@ for k=2:NT
 %     [metrics_ukf.propagate_time(k),metrics_cut4.propagate_time(k),metrics_cut6.propagate_time(k);
 %     metrics_ukf.jpda_time(k),metrics_cut4.jpda_time(k),metrics_cut6.jpda_time(k);
 %     metrics_ukf.measurement_time(k),metrics_cut4.measurement_time(k),metrics_cut6.measurement_time(k);   ]
-    
+%     
 end
 
 %% plotting the simulaion probabilities

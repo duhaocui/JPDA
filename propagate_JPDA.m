@@ -16,7 +16,7 @@ switch lower(method)
     case 'cut6'
         qd_pts=@conjugate_dir_gausspts_till_6moment_scheme2;
     case 'cut8'
-        qd_pts=@conjugate_dir_gausspts_till_8moment;
+        qd_pts=@get_cut8_points;
     case 'gh'
         qd_pts=@(m,P)GH_pts(m,P,para);
     case 'ekf'
@@ -28,10 +28,13 @@ end
 %     diag(P_ut)
 
 S=cell(1,model.No);
-parfor i=1:model.No
+for i=1:model.No
     if strcmp(method,'ekf')==0
+        try
         [x,w]=qd_pts(xf{i},Pf{i});
-        
+        catch
+            keyboard
+        end
         Y=zeros(size(x));
         for j=1:1:length(w)
             Y(j,:)=model.f{i}(Tvec(k),x(j,:)');

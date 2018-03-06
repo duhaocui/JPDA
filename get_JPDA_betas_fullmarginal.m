@@ -1,12 +1,14 @@
-function Betas=get_JPDA_betas_fullmarginal(MZ,PZ,model,JPDAprops,ymset)
+function Betas=get_JPDA_betas_fullmarginal(MZ,PZ,model,JPDAprops,ymset,out_of_gated_meas_per_target)
 % first get all events
 % Betas (i,j): i is target, j is measurement. if there are M measurements
 % then j=M+1 is the null probability
 
 Nm=length(ymset);
-A=jpda_full_event_combos(model.No,Nm);
+A=jpda_full_event_combos(model.No,Nm,out_of_gated_meas_per_target);
 % A(i,j,k) ... k is the event count or id.
 % i is the target index. and j is the measurement index
+% keyboard
+
 
 TargetIndList=1:1:model.No;
 Betas=zeros(model.No,Nm+1);
@@ -55,6 +57,7 @@ for e=1:1:size(A,3) % go throught all thee events
     
 end
 
+% keyboard
 
 for i=1:No
     for j=1:Nm

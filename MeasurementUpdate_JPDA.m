@@ -12,7 +12,7 @@ switch lower(method)
     case 'cut6'
         qd_pts=@conjugate_dir_gausspts_till_6moment_scheme2;
     case 'cut8'
-        qd_pts=@conjugate_dir_gausspts_till_8moment;
+        qd_pts=@get_cut8_points;
     case 'gh'
         qd_pts=@(m,P)GH_pts(m,P,para);
     case 'ekf'
@@ -21,7 +21,8 @@ switch lower(method)
         error('smthg is wrong: DONT ask me what')
         %         qd_pts
 end
-
+out_of_gated_meas_per_target=cell(1,model.No);
+GAMMA=5; %3sigma
 for radn = 1:Radmodel.Nrad
     Nm=length(ymset{radn});
     if Nm==0
@@ -79,18 +80,38 @@ for radn = 1:Radmodel.Nrad
             end
         end
     end
+    Nm=length(ymset{radn});
+    for i=1:model.No
+        out_of_gated_meas_per_target{i}=[];
+        P=[];
+        for j=1:Nm
+            try
+                if (MZ{i}(:)-ymset{radn}{j}(:))'*inv(PZ{i})*(MZ{i}(:)-ymset{radn}{j}(:))>GAMMA^2
+                    P=[P,j];
+                end
+            catch
+                keyboard
+            end
+        end
+        out_of_gated_meas_per_target{i}=P;
+        
+    end
     
     %% JPDA Association probabilities
     % first get all events
     % Betas (i,j): i is target, j is measurement. if there are M measurements
     % then j=M+1 is the null probability
     pp = tic;
-    Betas=get_JPDA_betas_fullmarginal(MZ,PZ,model,JPDAprops,ymset{radn});
+    Betas=get_JPDA_betas_fullmarginal(MZ,PZ,model,JPDAprops,ymset{radn},out_of_gated_meas_per_target);
     metrics.jpda_time(k) = toc(pp);
     
     Nm=length(ymset{radn});
     JPDAprops.Betas{k}=Betas;
     
+    if length(Betas(Betas<1 & Betas>0))>0
+        Betas
+%         keyboard
+    end
     %%   Do measurement update
     for i=1:model.No
         muprior=xf{i};
@@ -101,7 +122,7 @@ for radn = 1:Radmodel.Nrad
             v{j}=ymset{radn}{j}-MZ{i};
         end
         
-        Betas(i,:)
+%         Betas(i,:)
         
         inovcov=0;
         vs=0;
