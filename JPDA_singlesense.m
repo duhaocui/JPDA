@@ -1,8 +1,10 @@
 % implementing JPDA
 
-clc
-clear
-close all
+function JPDA_singlesense(NN)
+
+% clc
+% clear
+% close all
 
 %% constants
 Re=6378.1;
@@ -26,14 +28,13 @@ for i=1:model.No
     model.f{i}=@(tk,xk)processmodel_2body(dt,MU,tk,xk);
     model.fn(i)=6;
     model.Q{i}=1e-10*diag([1e-4,1e-4,1e-4,1e-8,1e-8,1e-8]);
-    model.artQ{i}=1e-3*diag([1e-6,1e-6,1e-6,1e-9,1e-9,1e-9]);
+    model.artQ{i}=1e0*diag([1e-6,1e-6,1e-6,1e-9,1e-9,1e-9]);
 end
 
 
 
 f=model.f;
-parfor i=1:model.No
-    i
+for i=1:model.No
     for k=2:1:NT
         xtruth{i}(k,:)=f{i}(Tvec(k-1),xtruth{i}(k-1,:));
     end
@@ -51,7 +52,7 @@ for i=1:model.noncatlog.No
     noncatlog.xtruth{i}(1,:)=noncatlog.Xsat0(i,:);
     model.noncatlog.f{i}=@(tk,xk)processmodel_2body(dt,tk,xk);
     model.noncatlog.fn(i)=6;
-%     model.noncatlog.Q{i}=1e-2*diag([1e-9,1e-9,1e-9,1e-12,1e-12,1e-12]);
+    %     model.noncatlog.Q{i}=1e-2*diag([1e-9,1e-9,1e-9,1e-12,1e-12,1e-12]);
 end
 
 
@@ -69,7 +70,7 @@ end
 %% radars (lat,long, altitude) in geod+edic
 Nrad=1;
 
-hn=3;
+hn=2;
 
 close all
 th_rng=[-10*pi/180,10*pi/180];
@@ -87,7 +88,7 @@ PolarPositions={[0,-pi/6,Re]};
 
 SensGeom={[pi/4,10000]};  %misc paras such as [cone_angle,max dist of meas]
 
-Radmodel.R={diag([(100*1e-3)^2,(5*pi/180)^2,(5*pi/180)^2])};
+Radmodel.R={diag([(0.1*pi/180)^2,(0.1*pi/180)^2])};
 
 Radmodel.SensGeom=SensGeom;
 Radmodel.PolarPositions=PolarPositions;
@@ -100,14 +101,15 @@ Radmodel.Nclutter=5;
 X1=generate_rnd_clutter(10,Radmodel.PolarPositions{1},Radmodel.SensGeom{1})
 
 
-figure
-plot_sat_radar_system_jpda(Radmodel)
-hold on
-for i=1:model.No
-    plot3(xtruth{i}(:,1),xtruth{i}(:,2),xtruth{i}(:,3),'k--')
+if method.plot_anime
+    figure
+    plot_sat_radar_system_jpda(Radmodel)
+    hold on
+    for i=1:model.No
+        plot3(xtruth{i}(:,1),xtruth{i}(:,2),xtruth{i}(:,3),'k--')
+    end
+    plot3(X1(:,1),X1(:,2),X1(:,3),'k+','linewidth',2,'MarkerSize',6)
 end
-plot3(X1(:,1),X1(:,2),X1(:,3),'k+','linewidth',2,'MarkerSize',6)
-
 
 % keyboard
 
@@ -126,8 +128,8 @@ if method.plot_anime
     for i=1:model.No
         dothdl{i}=plot3(xtruth{i}(k,1),xtruth{i}(k,2),xtruth{i}(k,3),'ko','MarkerSize',6,'linewidth',2);
     end
-
-
+    
+    
     for k=1:1:NT
         k
         for i=1:model.No
@@ -147,15 +149,15 @@ if method.plot_anime
                 set(dothdl{i},'XData', xtruth{i}(k,1),'YData', xtruth{i}(k,2),'ZData', xtruth{i}(k,3),'Color','r');
             end
         end
-
-
+        
+        
         for i=1:Radmodel.Nrad
-
-
+            
+            
         end
-
+        
         pause(0.1)
-
+        
     end
 end
 
@@ -189,11 +191,11 @@ Satobserve
 remtargs=[];
 goodtargs=[];
 for i=1:length(Satobserve)
-   if Satobserve(i)<50
-       remtargs=[remtargs,i];
-   else
-       goodtargs=[goodtargs,i];
-   end
+    if Satobserve(i)<50
+        remtargs=[remtargs,i];
+    else
+        goodtargs=[goodtargs,i];
+    end
 end
 remtargs=[remtargs,goodtargs(4:end)];
 
@@ -205,7 +207,7 @@ model.No=length(model.f);
 
 xtruth(remtargs)=[];
 Satobserve(remtargs)=[];
-    
+
 % keyboard
 
 %% Setting JPDA properties
@@ -272,7 +274,7 @@ for k=2:NT
     pp=tic;
     [xfukf{k},Pfukf{k}]=propagate_JPDA(xfukf{k-1},Pfukf{k-1},Tvec,k-1,k,model,'ut');
     metrics_ukf.propagate_time(k)=toc(pp);
-
+    
     pp=tic;
     [xfcut4{k},Pfcut4{k}]=propagate_JPDA(xfcut4{k-1},Pfcut4{k-1},Tvec,k-1,k,model,'cut4');
     metrics_cut4.propagate_time(k)=toc(pp);
@@ -285,7 +287,7 @@ for k=2:NT
     [xfcut8{k},Pfcut8{k}]=propagate_JPDA(xfcut8{k-1},Pfcut8{k-1},Tvec,k-1,k,model,'cut8');
     metrics_cut8.propagate_time(k)=toc(pp);
     
-%     [metrics_ukf.propagate_time(k),metrics_cut4.propagate_time(k),metrics_cut6.propagate_time(k)]
+    %     [metrics_ukf.propagate_time(k),metrics_cut4.propagate_time(k),metrics_cut6.propagate_time(k)]
     
     ymset=cell(1,Radmodel.Nrad);
     
@@ -305,8 +307,8 @@ for k=2:NT
     % now add the clutter
     for i=1:model.No
         for j=1:Radmodel.Nrad
-%             x=xtruth{i}(k,1:3);
-%             Xclutter=mvnrnd(x,blkdiag(1e5,1e5,1e5),50);
+            %             x=xtruth{i}(k,1:3);
+            %             Xclutter=mvnrnd(x,blkdiag(1e5,1e5,1e5),50);
             Xclutter=generate_rnd_clutter(Radmodel.Nclutter,Radmodel.PolarPositions{j},Radmodel.SensGeom{j});
             for s=1:size(Xclutter,1)
                 [hh,gg]=Radmodel.h{j}(Xclutter(s,:));
@@ -334,11 +336,11 @@ for k=2:NT
     [xfcut8{k},Pfcut8{k},JPDAprops_cut8,metrics_cut8]=MeasurementUpdate_JPDA(xfcut8{k},Pfcut8{k},model,Radmodel,JPDAprops_cut8,metrics_cut8,ymset,k,'cut8');
     metrics_cut8.measurement_time(k)=toc(pp);
     
-%     disp('Metrics')
-%     [metrics_ukf.propagate_time(k),metrics_cut4.propagate_time(k),metrics_cut6.propagate_time(k);
-%     metrics_ukf.jpda_time(k),metrics_cut4.jpda_time(k),metrics_cut6.jpda_time(k);
-%     metrics_ukf.measurement_time(k),metrics_cut4.measurement_time(k),metrics_cut6.measurement_time(k);   ]
-%     
+    %     disp('Metrics')
+    %     [metrics_ukf.propagate_time(k),metrics_cut4.propagate_time(k),metrics_cut6.propagate_time(k);
+    %     metrics_ukf.jpda_time(k),metrics_cut4.jpda_time(k),metrics_cut6.jpda_time(k);
+    %     metrics_ukf.measurement_time(k),metrics_cut4.measurement_time(k),metrics_cut6.measurement_time(k);   ]
+    %
 end
 
 %% plotting the simulaion probabilities
@@ -423,19 +425,19 @@ for i=1:model.No
         end
         for s=1:model.fn(i)
             
-%             figure(s+model.fn(max(1,i-1))*(i-1) )
-%             plot(Tvec(2:end),sqrt(sum(XF(2:end,s).^2,2)),[pS{meth},'--'],'linewidth',2)
+            %             figure(s+model.fn(max(1,i-1))*(i-1) )
+            %             plot(Tvec(2:end),sqrt(sum(XF(2:end,s).^2,2)),[pS{meth},'--'],'linewidth',2)
             
             ERRORS(s,meth,i)=sqrt(sum(XF(2:end,s).^2)/length(Tvec(2:end)));
-%             hold on
-%             plot(Tvec(2:end),sqrt(sum(XF(2:end,s).^2,2))+3*sigmas(2:end,s),'--','linewidth',2)
-%             plot(Tvec(2:end),sqrt(sum(XF(2:end,s).^2,2))-3*sigmas(2:end,s),'--','linewidth',2)
+            %             hold on
+            %             plot(Tvec(2:end),sqrt(sum(XF(2:end,s).^2,2))+3*sigmas(2:end,s),'--','linewidth',2)
+            %             plot(Tvec(2:end),sqrt(sum(XF(2:end,s).^2,2))-3*sigmas(2:end,s),'--','linewidth',2)
             
-%             xlabel('time')
-%             ylabel(['Error in states ',sat_states{s}])
-%             title(['Satellite ',num2str(i)])
-%             legend(Final_methods{1:meth})
-%             plot_prop_paper_jpda
+            %             xlabel('time')
+            %             ylabel(['Error in states ',sat_states{s}])
+            %             title(['Satellite ',num2str(i)])
+            %             legend(Final_methods{1:meth})
+            %             plot_prop_paper_jpda
             
         end
     end
@@ -476,3 +478,5 @@ sqrt( sum(ERRORS.^2,3)/size(ERRORS,3) )
 %     pause(1)
 %     clf
 % end
+
+save(['JPDA_satsinglesense_',num2str(NN),'.mat'])

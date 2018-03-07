@@ -28,7 +28,7 @@ end
 %     diag(P_ut)
 
 S=cell(1,model.No);
-for i=1:model.No
+parfor i=1:model.No
     if strcmp(method,'ekf')==0
         try
         [x,w]=qd_pts(xf{i},Pf{i});

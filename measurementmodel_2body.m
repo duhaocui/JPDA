@@ -28,7 +28,7 @@ end
 %     h=r;
 % end
 
-h=[r;th;phi];
+h=[th;phi];
 
 % % [azimuth,elevation,r] = cart2sph(x(1),x(2),x(3));
 % [v,Rot,p]=vec_radar_coordchange(x,PolarPosition,'ecef2local');
